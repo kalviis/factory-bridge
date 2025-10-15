@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.ruff_cache/
+factory_bridge/__pycache__/
+
+.venv/
+uv.lock
+
+prompt-config.json
+custom-system-prompt.txt
+static/
+
+.DS_Store
+*.log
