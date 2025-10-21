@@ -4,7 +4,11 @@
 import argparse
 import logging
 import sys
-from factory_bridge.config import DEFAULT_PROXY_PORT, FACTORY_CONFIG, CUSTOM_PROMPT_CONFIG
+from factory_bridge.config import (
+    DEFAULT_PROXY_PORT,
+    FACTORY_CONFIG,
+    CUSTOM_PROMPT_CONFIG,
+)
 from factory_bridge.auth import check_auth
 from factory_bridge.cliproxy import setup_cliproxy, start_cliproxy, run_cliproxy_login
 from factory_bridge.server import generate_factory_config, run_server
@@ -12,15 +16,22 @@ from factory_bridge.server import generate_factory_config, run_server
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Factory AI + Claude Code OAuth Proxy")
-    parser.add_argument("--port", type=int, default=DEFAULT_PROXY_PORT, help=f"Proxy port (default: {DEFAULT_PROXY_PORT})")
-    parser.add_argument("--login", action="store_true", help="Authenticate with Claude Code")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=DEFAULT_PROXY_PORT,
+        help=f"Proxy port (default: {DEFAULT_PROXY_PORT})",
+    )
+    parser.add_argument(
+        "--login", action="store_true", help="Authenticate with Claude Code"
+    )
     parser.add_argument("--setup", action="store_true", help="Setup CLIProxyAPI only")
     args = parser.parse_args()
 

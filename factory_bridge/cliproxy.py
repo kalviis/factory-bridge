@@ -34,7 +34,9 @@ signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
 
 def patch_cliproxy():
     """Patch CLIProxyAPI to respect custom system prompts"""
-    executor_file = CLIPROXY_DIR / "internal" / "runtime" / "executor" / "claude_executor.go"
+    executor_file = (
+        CLIPROXY_DIR / "internal" / "runtime" / "executor" / "claude_executor.go"
+    )
 
     if not executor_file.exists():
         return False
@@ -52,9 +54,11 @@ def patch_cliproxy():
 
     content = content.replace(pattern, replacement)
 
-    lines = content.split('\n')
-    filtered_lines = [line for line in lines if '"github.com/tidwall/sjson"' not in line]
-    content = '\n'.join(filtered_lines)
+    lines = content.split("\n")
+    filtered_lines = [
+        line for line in lines if '"github.com/tidwall/sjson"' not in line
+    ]
+    content = "\n".join(filtered_lines)
 
     executor_file.write_text(content)
     print("Patching CLIProxyAPI...")
@@ -68,9 +72,14 @@ def setup_cliproxy():
     if not CLIPROXY_DIR.exists():
         print("Cloning CLIProxyAPI...")
         result = subprocess.run(
-            ["git", "clone", "https://github.com/router-for-me/CLIProxyAPI.git", str(CLIPROXY_DIR)],
+            [
+                "git",
+                "clone",
+                "https://github.com/router-for-me/CLIProxyAPI.git",
+                str(CLIPROXY_DIR),
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         if result.returncode != 0:
             print(f"Error cloning CLIProxyAPI: {result.stderr}")
@@ -84,6 +93,7 @@ def setup_cliproxy():
         if CLIPROXY_DIR.exists() and not (CLIPROXY_DIR / "internal").exists():
             print("CLIProxyAPI directory exists but appears incomplete, re-cloning...")
             import shutil
+
             shutil.rmtree(CLIPROXY_DIR)
             setup_cliproxy()
             return
@@ -96,7 +106,7 @@ def setup_cliproxy():
             ["go", "build", "-o", "cli-proxy-api", "./cmd/server"],
             cwd=CLIPROXY_DIR,
             capture_output=True,
-            text=True
+            text=True,
         )
         if result.returncode != 0:
             print(f"Error building CLIProxyAPI: {result.stderr}")
@@ -130,7 +140,7 @@ def start_cliproxy():
     cliproxy_process = subprocess.Popen(
         [str(binary), "--config", str(CLIPROXY_CONFIG)],
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
     )
 
     time.sleep(1)
@@ -147,6 +157,6 @@ def run_cliproxy_login():
     binary = CLIPROXY_DIR / "cli-proxy-api"
     result = subprocess.run(
         [str(binary), "--config", str(CLIPROXY_CONFIG), "--claude-login"],
-        cwd=CLIPROXY_DIR
+        cwd=CLIPROXY_DIR,
     )
     return result.returncode == 0
