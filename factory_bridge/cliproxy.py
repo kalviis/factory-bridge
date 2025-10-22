@@ -4,6 +4,7 @@ import atexit
 import signal
 import subprocess
 import sys
+import json
 import time
 from factory_bridge.config import (
     PROXY_DIR,
@@ -11,6 +12,7 @@ from factory_bridge.config import (
     CLIPROXY_CONFIG,
     CLIPROXY_PORT,
     CLIPROXY_AUTH_DIR,
+    CLIPROXY_COMMIT,
 )
 
 cliproxy_process = None
@@ -33,36 +35,34 @@ signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
 
 
 def patch_cliproxy():
-    """Patch CLIProxyAPI to respect custom system prompts"""
-    executor_file = (
-        CLIPROXY_DIR / "internal" / "runtime" / "executor" / "claude_executor.go"
+    """Patch CLIProxyAPI to remove cache_control from Claude Code instructions"""
+    instructions_file = (
+        CLIPROXY_DIR / "internal" / "misc" / "claude_code_instructions.txt"
     )
 
-    if not executor_file.exists():
+    if not instructions_file.exists():
         return False
 
-    content = executor_file.read_text()
+    content = instructions_file.read_text()
 
-    if "CUSTOM MODIFICATION" in content:
+    # Check if already patched
+    if "cache_control" not in content:
         return True
 
-    pattern = '\tbody, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))'
-    replacement = '\t// CUSTOM MODIFICATION: Respect custom prompts from proxy\n\t// body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))'
-
-    if pattern not in content:
+    # Remove cache_control from the instructions, handle it from our proxy instead
+    try:
+        instructions = json.loads(content)
+        for block in instructions:
+            if isinstance(block, dict) and "cache_control" in block:
+                del block["cache_control"]
+        instructions_file.write_text(json.dumps(instructions))
+        print(
+            "Patching CLIProxyAPI..."
+        )
+        return True
+    except json.JSONDecodeError:
+        print("Warning: Failed to parse Claude Code instructions")
         return False
-
-    content = content.replace(pattern, replacement)
-
-    lines = content.split("\n")
-    filtered_lines = [
-        line for line in lines if '"github.com/tidwall/sjson"' not in line
-    ]
-    content = "\n".join(filtered_lines)
-
-    executor_file.write_text(content)
-    print("Patching CLIProxyAPI...")
-    return True
 
 
 def setup_cliproxy():
@@ -70,7 +70,7 @@ def setup_cliproxy():
     PROXY_DIR.mkdir(parents=True, exist_ok=True)
 
     if not CLIPROXY_DIR.exists():
-        print("Cloning CLIProxyAPI...")
+        print(f"Cloning CLIProxyAPI...")
         result = subprocess.run(
             [
                 "git",
@@ -85,6 +85,17 @@ def setup_cliproxy():
             print(f"Error cloning CLIProxyAPI: {result.stderr}")
             sys.exit(1)
 
+        # Checkout specific commit to avoid breaking changes
+        result = subprocess.run(
+            ["git", "checkout", CLIPROXY_COMMIT],
+            cwd=CLIPROXY_DIR,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print(f"Error checking out commit {CLIPROXY_COMMIT}: {result.stderr}")
+            sys.exit(1)
+
         if not patch_cliproxy():
             print("Warning: Failed to patch CLIProxyAPI")
 
@@ -97,6 +108,17 @@ def setup_cliproxy():
             shutil.rmtree(CLIPROXY_DIR)
             setup_cliproxy()
             return
+
+        # Ensure we're on the correct commit
+        if CLIPROXY_DIR.exists():
+            result = subprocess.run(
+                ["git", "checkout", CLIPROXY_COMMIT],
+                cwd=CLIPROXY_DIR,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                print(f"Warning: Could not checkout commit {CLIPROXY_COMMIT}")
 
         if not patch_cliproxy():
             print("Warning: Failed to patch CLIProxyAPI")

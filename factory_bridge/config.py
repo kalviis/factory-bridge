@@ -5,6 +5,9 @@ from pathlib import Path
 DEFAULT_PROXY_PORT = 8318
 CLIPROXY_PORT = 8319
 
+# Specific CLIProxyAPI commit to avoid breaking changes
+CLIPROXY_COMMIT = "9678be7aa435c91bec7a15bd17db1256a0d079d4"
+
 PROJECT_DIR = Path(__file__).parent.parent
 PROXY_DIR = Path.home() / ".droid-proxy"
 CLIPROXY_DIR = PROXY_DIR / "CLIProxyAPI"
